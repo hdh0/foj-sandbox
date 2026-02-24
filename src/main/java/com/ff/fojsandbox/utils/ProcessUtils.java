@@ -1,6 +1,5 @@
 package com.ff.fojsandbox.utils;
 
-import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ff.fojsandbox.model.ExecuteMessage;
 import org.springframework.util.StopWatch;
@@ -8,7 +7,6 @@ import org.springframework.util.StopWatch;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 public class ProcessUtils {
     /**
@@ -38,7 +36,7 @@ public class ProcessUtils {
             StringBuilder outputStringBuilder = new StringBuilder();
             String outputLine;
             while ((outputLine = bufferedReader.readLine()) != null) {
-                outputStringBuilder.append(outputLine);
+                outputStringBuilder.append(outputLine).append("\n");
             }
             String result = StrUtil.trim(outputStringBuilder.toString());
             executeMessage.setMessage(result);
