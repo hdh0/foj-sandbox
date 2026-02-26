@@ -9,6 +9,7 @@ import com.ff.fojsandbox.model.ExecuteCodeResponse;
 import com.ff.fojsandbox.model.ExecuteMessage;
 import com.ff.fojsandbox.model.JudgeInfo;
 import com.ff.fojsandbox.utils.ProcessUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
 
     private static final String GLOBAL_CODE_PATH = "tmpCode";
@@ -45,7 +47,9 @@ public abstract class JavaCodeSandboxTemplate implements CodeSandbox {
         ExecuteMessage executeMessage = compileCode(userCodeFile);
         // 编译错误直接返回
         if(executeMessage.getExitCode() != 0 || StrUtil.isNotBlank(executeMessage.getErrorMessage())){
-            return getErrorExecuteCodeResponse(new RuntimeException(executeMessage + "\n" + executeMessage.getErrorMessage()));
+            String errorMessage = executeMessage + "\n" + executeMessage.getErrorMessage();
+            log.error(errorMessage);
+            return getErrorExecuteCodeResponse(new RuntimeException(errorMessage));
         }
         // 运行代码
         List<ExecuteMessage> executeMessageList = runCode(inputList, userCodeFile);
