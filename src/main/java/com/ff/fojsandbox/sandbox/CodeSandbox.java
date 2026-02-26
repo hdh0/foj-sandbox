@@ -1,4 +1,4 @@
-package com.ff.fojsandbox;
+package com.ff.fojsandbox.sandbox;
 
 
 import com.ff.fojsandbox.model.ExecuteCodeRequest;

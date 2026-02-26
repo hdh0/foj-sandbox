@@ -1,16 +1,9 @@
-package com.ff.fojsandbox;
+package com.ff.fojsandbox.sandbox.java;
 
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.util.ArrayUtil;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.dfa.FoundWord;
-import cn.hutool.dfa.WordTree;
 import com.ff.fojsandbox.model.ExecuteCodeRequest;
 import com.ff.fojsandbox.model.ExecuteCodeResponse;
 import com.ff.fojsandbox.model.ExecuteMessage;
-import com.ff.fojsandbox.model.JudgeInfo;
-import com.ff.fojsandbox.utils.ProcessUtils;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerCmd;
@@ -18,29 +11,26 @@ import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.command.StatsCmd;
 import com.github.dockerjava.api.model.*;
-import com.github.dockerjava.core.DockerClientBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
+import javax.annotation.Resource;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-@Component
+@Component("java")
 public class JavaDockerCodeSandboxImpl extends JavaCodeSandboxTemplate {
 
     private static final long TIME_OUT = 2L; // 2秒执行超时
     private static final String IMAGE = "eclipse-temurin:8-jdk-alpine";
-    private static final DockerClient dockerClient;
 
-    static {
-        // 初始化 Docker 客户端
-        dockerClient = DockerClientBuilder.getInstance().build();
-    }
+    @Resource
+    DockerClient dockerClient;
 
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
@@ -74,7 +64,7 @@ public class JavaDockerCodeSandboxImpl extends JavaCodeSandboxTemplate {
         List<ExecuteMessage> executeMessageList = new ArrayList<>();
         for (String input : inputList) {
             String[] inputArgs = input.split(" ");
-            String[] runCmd = ArrayUtil.append(new String[]{"java", "-cp", "/app", "Main"}, inputArgs);
+            String[] runCmd = ArrayUtil.append(new String[]{"java", "-cp", "/app", "Main"});
             ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(containerId)
                     .withCmd(runCmd)
                     .withAttachStdin(true)
@@ -96,25 +86,24 @@ public class JavaDockerCodeSandboxImpl extends JavaCodeSandboxTemplate {
             // 执行命令
             final StringBuilder messageBuilder = new StringBuilder();
             final StringBuilder errorBuilder = new StringBuilder();
-            // 回调函数 用来获取执行结果
-            ResultCallback.Adapter<Frame> execStartCmdResultCallback = new ResultCallback.Adapter<Frame>() {
-                @Override
-                public void onNext(Frame frame) {
-                    StreamType streamType = frame.getStreamType();
-                    String mes = new String(frame.getPayload(), StandardCharsets.UTF_8);
-                    if (streamType == StreamType.STDERR) {
-                        errorBuilder.append(mes);
-                    } else {
-                        messageBuilder.append(mes);
-                    }
-                }
-            };
+            String formattedInput = input.endsWith("\n") ? input : input + "\n";
+            InputStream stdinStream = new ByteArrayInputStream(formattedInput.getBytes(StandardCharsets.UTF_8));
             StopWatch stopWatch = new StopWatch();
             long time;
             try {
                 stopWatch.start();
                 dockerClient.execStartCmd(cmdId)
-                        .exec(execStartCmdResultCallback)
+                        .withStdIn(stdinStream)
+                        .exec(new ResultCallback.Adapter<Frame>() {
+                            @Override
+                            public void onNext(Frame frame) {
+                                if (frame.getStreamType() == StreamType.STDERR) {
+                                    errorBuilder.append(new String(frame.getPayload()));
+                                } else {
+                                    messageBuilder.append(new String(frame.getPayload()));
+                                }
+                            }
+                        })
                         .awaitCompletion(TIME_OUT, TimeUnit.SECONDS);
                 stopWatch.stop();
                 time = stopWatch.getTotalTimeMillis();

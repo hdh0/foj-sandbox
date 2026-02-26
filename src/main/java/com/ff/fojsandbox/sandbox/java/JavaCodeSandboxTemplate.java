@@ -1,4 +1,4 @@
-package com.ff.fojsandbox;
+package com.ff.fojsandbox.sandbox.java;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
@@ -8,6 +8,7 @@ import com.ff.fojsandbox.model.ExecuteCodeRequest;
 import com.ff.fojsandbox.model.ExecuteCodeResponse;
 import com.ff.fojsandbox.model.ExecuteMessage;
 import com.ff.fojsandbox.model.JudgeInfo;
+import com.ff.fojsandbox.sandbox.CodeSandbox;
 import com.ff.fojsandbox.utils.ProcessUtils;
 import lombok.extern.slf4j.Slf4j;
 
