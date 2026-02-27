@@ -2,14 +2,19 @@ package com.ff.fojsandbox.sandbox.java;
 
 import com.ff.fojsandbox.model.ExecuteCodeRequest;
 import com.ff.fojsandbox.model.ExecuteCodeResponse;
+import com.ff.fojsandbox.pool.ContainerPool;
 import com.ff.fojsandbox.sandbox.DockerCodeSandboxTemplate;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
 
 @Component("java")
 public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     private static final String GLOBAL_JAVA_CLASS_NAME = "Main.java";
-    private static final String IMAGE = "eclipse-temurin:8-jdk-alpine";
+
+    @Resource
+    private ContainerPool containerPool;
 
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
@@ -28,7 +33,7 @@ public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String getImage() {
-        return IMAGE;
+        return "";
     }
 
     @Override
@@ -39,5 +44,21 @@ public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
     @Override
     protected String[] getRunCommand() {
         return new String[]{"java", "Main"};
+    }
+
+    @Override
+    public String createAndStartContainer(){
+        try {
+            // 从容器池请求一个容器
+            return containerPool.borrowContainer("java");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void cleanContainer(String containerId) {
+        // 归还容器
+        containerPool.returnContainer("java", containerId);
     }
 }

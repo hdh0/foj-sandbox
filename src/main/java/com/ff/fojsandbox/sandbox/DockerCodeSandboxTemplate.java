@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -78,7 +79,10 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
         ExecuteCodeResponse executeCodeResponse = getOutputResponse(inputList, executeMessageList);
 
         // 清理资源
-        cleanResource(containerId, userCodeFile);
+        CompletableFuture.runAsync(() -> {
+            cleanResource(containerId, userCodeFile);
+        });
+
         return executeCodeResponse;
     }
 
@@ -200,11 +204,16 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
             // 统计程序占用内存
             final Long[] memory = {0L};
             StatsCmd statsCmd = dockerClient.statsCmd(containerId);
+            final boolean[] isCompleted = {false};
             statsCmd.exec(new ResultCallback.Adapter<Statistics>() {
                 @Override
                 public void onNext(Statistics statistics) {
-                    System.out.println("当前内存使用: " + statistics.getMemoryStats().getUsage());
-                    memory[0] = Math.max(memory[0], statistics.getMemoryStats().getUsage());
+                    if (isCompleted[0]) return; // 已经完成，停止处理
+                    Long usage = statistics.getMemoryStats().getUsage();
+                    if (usage != null) {
+                        log.info("当前内存占用: " + usage);
+                        memory[0] = Math.max(memory[0], usage);
+                    }
                 }
             });
             // 执行命令
@@ -232,9 +241,11 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
                         .awaitCompletion(TIME_OUT, TimeUnit.SECONDS);
                 stopWatch.stop();
                 time = stopWatch.getTotalTimeMillis();
-                statsCmd.close();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            } finally {
+                isCompleted[0] = true;
+                statsCmd.close();
             }
             executeMessage.setMessage(messageBuilder.toString());
             executeMessage.setErrorMessage(errorBuilder.toString());
@@ -280,19 +291,27 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
         return executeCodeResponse;
     }
 
+    // 清理容器
+    public void cleanContainer(String containerId) {
+        dockerClient.removeContainerCmd(containerId)
+                .withForce(true)
+                .exec();
+        log.info("容器清理成功");
+    }
+
+    // 清理临时代码文件
+    public void cleanFile(File userCodeFile) {
+        String userCodeParentPath = userCodeFile.getParentFile().getAbsolutePath();
+        boolean del = FileUtil.del(userCodeParentPath);
+        log.info("临时代码文件删除{}", del ? "成功" : "失败");
+    }
+
     /**
      * 清理资源
      */
     public void cleanResource(String containerId, File userCodeFile) {
-        // 清理容器
-        dockerClient.removeContainerCmd(containerId)
-                .withForce(true)
-                .exec();
-        System.out.println("容器清理成功");
-        // 清理临时代码文件
-        String userCodeParentPath = userCodeFile.getParentFile().getAbsolutePath();
-        boolean del = FileUtil.del(userCodeParentPath);
-        System.out.println("临时代码文件删除" + (del ? "成功" : "失败"));
+        cleanContainer(containerId);
+        cleanFile(userCodeFile);
     }
 
     /**
