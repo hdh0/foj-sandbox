@@ -1,15 +1,17 @@
-package com.ff.fojsandbox.sandbox.java;
+package com.ff.fojsandbox.sandbox.cpp;
 
 import com.ff.fojsandbox.model.ExecuteCodeRequest;
 import com.ff.fojsandbox.model.ExecuteCodeResponse;
 import com.ff.fojsandbox.sandbox.DockerCodeSandboxTemplate;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-@Component("java")
-public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
+@Slf4j
+@Component("cpp")
+public class CppCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
-    private static final String GLOBAL_JAVA_CLASS_NAME = "Main.java";
-    private static final String IMAGE = "eclipse-temurin:8-jdk-alpine";
+    private static final String GLOBAL_CPP_FILE_NAME = "main.cpp";
+    private static final String IMAGE = "frolvlad/alpine-gxx";
 
     @Override
     public ExecuteCodeResponse executeCode(ExecuteCodeRequest executeCodeRequest) {
@@ -18,7 +20,7 @@ public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String getFileName() {
-        return GLOBAL_JAVA_CLASS_NAME;
+        return GLOBAL_CPP_FILE_NAME;
     }
 
     @Override
@@ -33,11 +35,11 @@ public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String[] getCompileCommand() {
-        return new String[]{"javac", "-encoding", "utf-8", "Main.java"};
+        return new String[]{"g++", "-O2", "-std=c++11","main.cpp", "-o", "main"};
     }
 
     @Override
     protected String[] getRunCommand() {
-        return new String[]{"java", "Main"};
+        return new String[]{"./main"};
     }
 }
