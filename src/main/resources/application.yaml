@@ -2,3 +2,24 @@
 server:
   port: 8081
 
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        # 每个线程只预取 1 条消息。干不完（没 Ack）之前，MQ 不准发下一条。
+        prefetch: 1
+        acknowledge-mode: manual
+
+sandbox:
+  judge:
+    pool-sizes:
+      java: 3
+      python: 3
+      cpp: 3
+    concurrences:
+      java: 3
+      python: 3
+      cpp: 3
+  rabbitmq:
+    enabled: false
+    result-type: mq # mq/redis

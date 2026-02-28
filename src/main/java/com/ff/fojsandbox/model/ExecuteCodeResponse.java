@@ -12,7 +12,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExecuteCodeResponse {
-
     /**
      * 代码执行结果的输出列表
      */

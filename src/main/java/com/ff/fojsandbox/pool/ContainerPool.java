@@ -1,5 +1,6 @@
 package com.ff.fojsandbox.pool;
 
+import com.ff.fojsandbox.config.SandboxConfig;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
@@ -16,6 +17,7 @@ import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @Slf4j
@@ -24,8 +26,8 @@ public class ContainerPool {
     @Resource
     private DockerClient dockerClient;
 
-    // 每种语言分配的容器数量
-    private static final int POOL_SIZE_PER_LANG = 3;
+    @Resource
+    private SandboxConfig sandboxConfig;
 
     // 定义镜像映射
     private static final Map<String, String> IMAGE_MAP = new HashMap<>();
@@ -43,24 +45,29 @@ public class ContainerPool {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         log.info("正在初始化容器池...");
+        Map<String, Integer> poolSizes = sandboxConfig.getJudge().getPoolSizes();
         // 初始化阻塞队列 Map
         IMAGE_MAP.keySet().forEach(lang ->
-                langPoolMap.put(lang, new LinkedBlockingQueue<>(POOL_SIZE_PER_LANG))
+                langPoolMap.put(lang, new LinkedBlockingQueue<>(poolSizes.get(lang)))
         );
-        // 计算总任务数，使用固定大小的线程池
-        int totalContainers = IMAGE_MAP.size() * POOL_SIZE_PER_LANG;
-        int threadCount = Math.min(totalContainers, 20);
+        // 使用固定大小的线程池
+        int threadCount = 20;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         // 提交任务
+        AtomicInteger sum = new AtomicInteger();
         IMAGE_MAP.forEach((lang, image) -> {
             BlockingQueue<String> queue = langPoolMap.get(lang);
-            for (int i = 0; i < POOL_SIZE_PER_LANG; i++) {
+            int poolSize = poolSizes.get(lang);
+            for (int i = 0; i < poolSize; i++) {
                 // 为每个容器创建提交一个异步任务
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                     try {
                         String containerId = createAndStartContainer(image);
                         boolean offered = queue.offer(containerId);
+                        if(offered) {
+                            sum.getAndIncrement();
+                        }
                     } catch (Exception e) {
                         log.error("初始化容器失败: language={}, image={}", lang, image, e);
                     }
@@ -72,7 +79,7 @@ public class ContainerPool {
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             stopWatch.stop();
-            log.info("容器池初始化完成，耗时: {} ms，当前可用容器总数: {}", stopWatch.getTotalTimeMillis(), totalContainers);
+            log.info("容器池初始化完成，耗时: {} ms，当前可用容器总数: {}", stopWatch.getTotalTimeMillis(), sum.get());
         } catch (Exception e) {
             log.error("容器池初始化过程中发生异常", e);
             throw new RuntimeException("容器池初始化失败", e);
@@ -136,13 +143,14 @@ public class ContainerPool {
         }
     }
 
-    // 清理容器 杀死所有进程 + 清理文件
+    // 清理容器清理文件
     private boolean cleanContainer(String containerId) {
         try {
             // ps -o pid,comm : 列出 PID 和 进程名
             // awk ... : 排除 pid 1, 排除 sh, 排除 ps, 排除 tail
             // xargs kill : 杀掉剩下的
-            String cleanCmd = "ps -o pid,comm | awk 'NR>1 && $1!=1 && $2!=\"sh\" && $2!=\"ps\" && $2!=\"tail\" {print $1}' | xargs -r kill -9 || true && rm -rf /app/*";
+            // String cleanCmd = "ps -o pid,comm | awk 'NR>1 && $1!=1 && $2!=\"sh\" && $2!=\"ps\" && $2!=\"tail\" {print $1}' | xargs -r kill -9 || true && rm -rf /app/*";
+            String cleanCmd = "rm -rf /app/*";
             String execId = dockerClient.execCreateCmd(containerId)
                     .withCmd("sh", "-c", cleanCmd)
                     .exec()
@@ -278,7 +286,7 @@ public class ContainerPool {
                             }, executor)).toArray(CompletableFuture[]::new)
             );
             // 设置全局超时时间
-            allTask.get(10, TimeUnit.SECONDS);
+            allTask.get(30, TimeUnit.SECONDS);
             log.info("容器池清理完成，共处理 {} 个容器。", allContainerIds.size());
         } catch (TimeoutException e) {
             log.error("容器清理超时！部分容器可能未被移除。请检查 Docker 守护进程状态。");

@@ -55,35 +55,33 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
         if(!checkCode(code)){
             return getErrorExecuteCodeResponse(new RuntimeException("代码中包含敏感词汇"));
         }
-        // 写入代码到文件
-        File userCodeFile = writeCodeToFile(code);
-
-        // 创建并启动容器
-        String containerId = createAndStartContainer();
-
-        // 复制代码文件到容器中
-        copyCodeToContainer(containerId, userCodeFile);
-
-        // 编译代码
-        if(needCompile()){
-            ExecuteMessage executeMessage = compileCode(containerId);
-            // 编译错误直接返回
-            if(StrUtil.isNotBlank(executeMessage.getErrorMessage())){
-                return getErrorExecuteCodeResponse(new RuntimeException(executeMessage.getErrorMessage()), containerId, userCodeFile);
+        File userCodeFile = null;
+        String containerId = null;
+        try {
+            // 1.写入代码到文件
+            userCodeFile = writeCodeToFile(code);
+            // 2.创建并启动容器
+            containerId = createAndStartContainer();
+            // 3.复制代码文件到容器中
+            copyCodeToContainer(containerId, userCodeFile);
+            // 4.编译代码 可选
+            if(needCompile()){
+                ExecuteMessage executeMessage = compileCode(containerId);
+                // 编译错误直接返回
+                if(StrUtil.isNotBlank(executeMessage.getErrorMessage())){
+                    return getErrorExecuteCodeResponse(new RuntimeException(executeMessage.getErrorMessage()));
+                }
             }
+            // 5.运行代码
+            List<ExecuteMessage> executeMessageList = runCode(containerId, inputList);
+            // 6.整理输出结果
+            return getOutputResponse(inputList, executeMessageList);
+        } finally {
+            // 异步清理资源 无论如何都会执行
+            String finalContainerId = containerId;
+            File finalFile = userCodeFile;
+            CompletableFuture.runAsync(() -> cleanResource(finalContainerId, finalFile));
         }
-        // 运行代码
-        List<ExecuteMessage> executeMessageList = runCode(containerId, inputList);
-
-        // 整理输出结果
-        ExecuteCodeResponse executeCodeResponse = getOutputResponse(inputList, executeMessageList);
-
-        // 清理资源
-        CompletableFuture.runAsync(() -> {
-            cleanResource(containerId, userCodeFile);
-        });
-
-        return executeCodeResponse;
     }
 
     // 子类必须实现的抽象方法
@@ -310,8 +308,16 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
      * 清理资源
      */
     public void cleanResource(String containerId, File userCodeFile) {
-        cleanContainer(containerId);
-        cleanFile(userCodeFile);
+        try {
+            if (containerId != null) {
+                cleanContainer(containerId);
+            }
+            if (userCodeFile != null) {
+                cleanFile(userCodeFile);
+            }
+        } catch (Exception e) {
+            log.error("清理资源时发生异常", e);
+        }
     }
 
     /**
@@ -325,12 +331,6 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
         executeCodeResponse.setOutputList(new ArrayList<>());
         executeCodeResponse.setStatus(2); // 代码沙箱异常
         executeCodeResponse.setMessage(e.getMessage());
-        return executeCodeResponse;
-    }
-
-    private ExecuteCodeResponse getErrorExecuteCodeResponse(Throwable e, String containerId, File userCodeFile) {
-        ExecuteCodeResponse executeCodeResponse = getErrorExecuteCodeResponse(e);
-        cleanResource(containerId, userCodeFile);
         return executeCodeResponse;
     }
 }

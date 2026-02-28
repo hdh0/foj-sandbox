@@ -1,5 +1,6 @@
 package com.ff.fojsandbox.controller;
 
+import com.ff.fojsandbox.config.SandboxConfig;
 import com.ff.fojsandbox.model.ExecuteCodeRequest;
 import com.ff.fojsandbox.model.ExecuteCodeResponse;
 import com.ff.fojsandbox.sandbox.CodeSandbox;
@@ -17,8 +18,12 @@ public class MainController {
     @Resource
     private Map<String, CodeSandbox> codeSandboxMap;
 
+    @Resource
+    private SandboxConfig sandboxConfig;
+
     @GetMapping("/ping")
     public String checkHealth() {
+        System.out.println("SandboxConfig: " + sandboxConfig);
         return "pong";
     }
 

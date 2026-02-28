@@ -20,9 +20,8 @@ public class MyDockerClientConfig {
         DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())
                 .sslConfig(config.getSSLConfig())
-                .maxConnections(500)
-                .connectionTimeout(Duration.ofSeconds(10))
-                .responseTimeout(Duration.ofSeconds(10))
+                .connectionTimeout(Duration.ofSeconds(60))
+                .responseTimeout(Duration.ofSeconds(60))
                 .build();
         // 创建真正的客户端
         return DockerClientImpl.getInstance(config, httpClient);

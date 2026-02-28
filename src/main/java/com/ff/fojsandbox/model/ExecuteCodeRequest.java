@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 public class ExecuteCodeRequest {
 
+    private String submissionId;
+
     private List<String> inputList;
 
     private String code;
