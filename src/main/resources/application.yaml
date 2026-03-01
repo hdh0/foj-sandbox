@@ -13,13 +13,13 @@ spring:
 sandbox:
   judge:
     pool-sizes:
-      java: 3
-      python: 3
-      cpp: 3
+      java: 1
+      python: 1
+      cpp: 1
     concurrences:
-      java: 3
-      python: 3
-      cpp: 3
+      java: 1
+      python: 1
+      cpp: 1
   rabbitmq:
     enabled: false
     result-type: mq # mq/redis
