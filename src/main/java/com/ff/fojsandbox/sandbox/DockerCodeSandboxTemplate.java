@@ -69,7 +69,7 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
                 ExecuteMessage executeMessage = compileCode(containerId);
                 // 编译错误直接返回
                 if(StrUtil.isNotBlank(executeMessage.getErrorMessage())){
-                    return getErrorExecuteCodeResponse(new RuntimeException(executeMessage.getErrorMessage()));
+                    return getErrorExecuteCodeResponse(executeMessage.getErrorMessage());
                 }
             }
             // 5.运行代码
@@ -248,7 +248,7 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
             executeMessage.setMessage(messageBuilder.toString());
             executeMessage.setErrorMessage(errorBuilder.toString());
             executeMessage.setTime(time);
-            executeMessage.setMemory(memory[0]);
+            executeMessage.setMemory(memory[0] / (1024 * 1024)); // 转换为MB
             executeMessageList.add(executeMessage);
         }
         return executeMessageList;
@@ -331,6 +331,15 @@ public abstract class DockerCodeSandboxTemplate implements CodeSandbox {
         executeCodeResponse.setOutputList(new ArrayList<>());
         executeCodeResponse.setStatus(2); // 代码沙箱异常
         executeCodeResponse.setMessage(e.getMessage());
+        return executeCodeResponse;
+    }
+
+    private ExecuteCodeResponse getErrorExecuteCodeResponse(String errorMessage) {
+        log.info("编译错误: {}", errorMessage);
+        ExecuteCodeResponse executeCodeResponse = new ExecuteCodeResponse();
+        executeCodeResponse.setOutputList(new ArrayList<>());
+        executeCodeResponse.setStatus(0); // 编译错误
+        executeCodeResponse.setMessage(errorMessage);
         return executeCodeResponse;
     }
 }
