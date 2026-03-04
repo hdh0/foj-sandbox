@@ -45,7 +45,7 @@ public class PythonCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String[] getRunCommand() {
-        return new String[]{"python3", "-u", "main.py"};
+        return new String[]{"timeout", "2s", "python3", "-u", "main.py"};
     }
 
     @Override

@@ -45,7 +45,7 @@ public class CppCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String[] getRunCommand() {
-        return new String[]{"./main"};
+        return new String[]{"timeout", "2s", "./main"};
     }
 
     @Override

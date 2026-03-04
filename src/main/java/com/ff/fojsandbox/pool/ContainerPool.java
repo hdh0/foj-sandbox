@@ -222,6 +222,7 @@ public class ContainerPool {
                 .withMemory(sandboxConfig.getDocker().getMemoryLimit() * 1024 * 1024L)
                 .withMemorySwap(0L)
                 .withCpuCount(sandboxConfig.getDocker().getCpuLimit())
+                .withCpuQuota(50000L) // 限制 CPU 使用率
                 .withPidsLimit(sandboxConfig.getDocker().getPidLimit()) // 限制进程数量
                 .withInit(true)      // 使用 init 进程处理僵尸进程
                 .withSecurityOpts(Collections.singletonList("no-new-privileges"))

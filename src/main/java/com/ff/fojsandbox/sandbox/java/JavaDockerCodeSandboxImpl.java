@@ -43,7 +43,7 @@ public class JavaDockerCodeSandboxImpl extends DockerCodeSandboxTemplate {
 
     @Override
     protected String[] getRunCommand() {
-        return new String[]{"java", "Main"};
+        return new String[]{"timeout", "2s", "java", "Main"};
     }
 
     @Override
