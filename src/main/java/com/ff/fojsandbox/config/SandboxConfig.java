@@ -26,7 +26,7 @@ public class SandboxConfig {
         private Long memoryLimit; // 内存限制，单位为MB
         private Long cpuLimit;    // CPU限制，单位为CPU核心数
         private Long pidLimit;    // 进程数限制
-
+        private Map<String, String> images;
     }
 
     @Data

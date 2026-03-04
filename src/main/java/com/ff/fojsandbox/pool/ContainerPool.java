@@ -29,14 +29,6 @@ public class ContainerPool {
     @Resource
     private SandboxConfig sandboxConfig;
 
-    // 定义镜像映射
-    private static final Map<String, String> IMAGE_MAP = new HashMap<>();
-    static {
-        IMAGE_MAP.put("java", "eclipse-temurin:8-jdk-alpine");
-        IMAGE_MAP.put("python", "python:3.11-alpine");
-        IMAGE_MAP.put("cpp", "frolvlad/alpine-gxx");
-    }
-
     // 每种语言对应的阻塞队列
     private final Map<String, BlockingQueue<String>> langPoolMap = new HashMap<>();
 
@@ -47,7 +39,7 @@ public class ContainerPool {
         log.info("正在初始化容器池...");
         Map<String, Integer> poolSizes = sandboxConfig.getJudge().getPoolSizes();
         // 初始化阻塞队列 Map
-        IMAGE_MAP.keySet().forEach(lang ->
+        sandboxConfig.getDocker().getImages().keySet().forEach(lang ->
                 langPoolMap.put(lang, new LinkedBlockingQueue<>(poolSizes.get(lang)))
         );
         // 使用固定大小的线程池
@@ -56,7 +48,7 @@ public class ContainerPool {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         // 提交任务
         AtomicInteger sum = new AtomicInteger();
-        IMAGE_MAP.forEach((lang, image) -> {
+        sandboxConfig.getDocker().getImages().forEach((lang, image) -> {
             BlockingQueue<String> queue = langPoolMap.get(lang);
             int poolSize = poolSizes.get(lang);
             for (int i = 0; i < poolSize; i++) {
@@ -200,6 +192,7 @@ public class ContainerPool {
             case "java": return "java -version";
             case "python": return "python3 --version";
             case "cpp": return "g++ --version";
+            case "javascript": return "node --version";
             default: return "ls /app";
         }
     }
@@ -214,7 +207,7 @@ public class ContainerPool {
                 log.warn("销毁旧容器出错: {}", e.getMessage());
             }
             // 创建容器
-            String image = IMAGE_MAP.get(language);
+            String image = sandboxConfig.getDocker().getImages().get(language);
             String newContainerId = createAndStartContainer(image);
             langPoolMap.get(language).offer(newContainerId);
             log.info("已成功补充新容器: {}", newContainerId);
