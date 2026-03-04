@@ -23,3 +23,7 @@ sandbox:
   rabbitmq:
     enabled: false
     result-type: mq # mq/redis
+  docker:
+    cpu-limit: 4     # CPU 限制，单位核数
+    memory-limit: 64 # 内存限制，单位 MB
+    pid-limit: 32    # 进程数限制

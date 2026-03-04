@@ -226,10 +226,10 @@ public class ContainerPool {
     // 创建并启动容器，返回容器ID
     private String createAndStartContainer(String imageName) {
         HostConfig hostConfig = new HostConfig()
-                .withMemory(64 * 1024 * 1024L)
+                .withMemory(sandboxConfig.getDocker().getMemoryLimit() * 1024 * 1024L)
                 .withMemorySwap(0L)
-                .withCpuCount(1L)
-                .withPidsLimit(100L) // 限制进程数量
+                .withCpuCount(sandboxConfig.getDocker().getCpuLimit())
+                .withPidsLimit(sandboxConfig.getDocker().getPidLimit()) // 限制进程数量
                 .withInit(true)      // 使用 init 进程处理僵尸进程
                 .withSecurityOpts(Collections.singletonList("no-new-privileges"))
                 .withCapDrop(Capability.ALL);
