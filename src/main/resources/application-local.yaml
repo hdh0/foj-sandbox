@@ -1,22 +1,8 @@
-# 应用服务 WEB 访问端口
-server:
-  port: 8081
-
-spring:
-  rabbitmq:
-    listener:
-      simple:
-        # 每个线程只预取 1 条消息。干不完（没 Ack）之前，MQ 不准发下一条。
-        prefetch: 1
-        acknowledge-mode: manual
-  profiles:
-    active: local
-
 sandbox:
   judge:
     pool-sizes:
       java: 1
-      python: 1
+      python: 100
       cpp: 1
     concurrences:
       java: 1
