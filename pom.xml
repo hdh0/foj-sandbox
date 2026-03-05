@@ -104,7 +104,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.ff.fojsandbox.FojSandboxApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>

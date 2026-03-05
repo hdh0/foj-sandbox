@@ -1,4 +1,5 @@
 tmpCode
+application-local.yaml
 
 target/
 !.mvn/wrapper/maven-wrapper.jar

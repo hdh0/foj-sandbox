@@ -13,6 +13,7 @@ spring:
     active: local
 
 sandbox:
+  api-key: NOT_IN_THIS_FILE
   judge:
     pool-sizes:
       java: 1
