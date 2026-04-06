@@ -9,6 +9,16 @@ spring:
         # 每个线程只预取 1 条消息。干不完（没 Ack）之前，MQ 不准发下一条。
         prefetch: 1
         acknowledge-mode: manual
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: 123456
+    lettuce:
+      pool:
+        max-active: 10
+        max-idle: 10
+        min-idle: 1
+        time-between-eviction-runs: 10s
   profiles:
     active: local
 
